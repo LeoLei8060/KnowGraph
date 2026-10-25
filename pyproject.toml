@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "knowgraph"
+version = "0.1.0"
+description = "Local-first personal knowledge and growth system with a Markdown/Obsidian vault"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.110",
+  "uvicorn>=0.29",
+  "httpx[socks]>=0.27",
+  "anthropic>=1.5",
+  "PyYAML>=6.0",
+  "tzdata>=2024.1",
+  "pypdf>=4.0",
+  "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-cov>=5"]
+keyring = ["keyring>=24"]
+
+[project.scripts]
+knowgraph = "knowgraph.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["knowgraph*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

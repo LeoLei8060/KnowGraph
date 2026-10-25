@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1d5b79">
+  <title>KnowGraph · 本地知识工作台</title>
+  <link rel="stylesheet" href="/static/styles.css?v=0.2.10">
+</head>
+<body>
+  <header class="context-bar">
+    <a class="brand" href="#profile" aria-label="KnowGraph 首页">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">KnowGraph</span>
+      <span class="brand-sub">本地知识工作台</span>
+    </a>
+    <div class="context-stats" id="context-stats" aria-live="polite">
+      <span>正在读取本地状态…</span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="rail" aria-label="主导航">
+      <button class="rail-tab is-active" data-view="profile" type="button"><span>画像</span></button>
+      <button class="rail-tab" data-view="inbox" type="button"><span>收件箱</span></button>
+      <button class="rail-tab" data-view="news" type="button"><span>资讯</span></button>
+      <button class="rail-tab" data-view="search" type="button"><span>检索</span></button>
+      <button class="rail-tab" data-view="ask" type="button"><span>问答</span></button>
+      <button class="rail-tab" data-view="reviews" type="button"><span>回顾</span></button>
+      <button class="rail-tab" data-view="interests" type="button"><span>兴趣</span></button>
+      <button class="rail-tab" data-view="settings" type="button"><span>设置</span></button>
+      <div class="rail-foot">
+        <span class="rail-label">最近同步</span>
+        <span id="rail-time">—</span>
+      </div>
+    </nav>
+
+    <main id="main">
+      <section class="view is-active" id="view-profile" aria-labelledby="profile-title">
+        <header class="view-head">
+          <div>
+            <h1 id="profile-title">我的画像</h1>
+            <p class="lede">简历、技术栈与目标由你维护。系统只会根据检索和问答调整可撤销的近期兴趣。</p>
+          </div>
+          <div class="completeness" title="画像完整度">
+            <span id="profile-completeness">0%</span>
+            <small>完整度</small>
+          </div>
+        </header>
+
+        <section class="sheet">
+          <div class="sheet-head">
+            <h2>基本信息</h2>
+            <span class="hint">用于采集主题计划和回顾，不会发送给资讯来源。</span>
+          </div>
+          <form id="profile-form" class="form-grid">
+            <label>姓名<input name="name" autocomplete="name" placeholder="例如：Alex"></label>
+            <label>当前定位<input name="headline" placeholder="例如：后端工程师，正在补齐分布式系统"></label>
+            <label>所在城市<input name="location" placeholder="可选"></label>
+            <label>GitHub<input name="github" placeholder="https://github.com/…"></label>
+            <label>个人网站<input name="website" placeholder="https://…"></label>
+          </form>
+          <div class="actions">
+            <button class="btn primary" id="save-profile" type="button">保存基本信息</button>
+            <span class="save-state" id="profile-save-state"></span>
+          </div>
+        </section>
+
+        <section class="sheet">
+          <div class="sheet-head">
+            <h2>简历</h2>
+            <span class="hint">原始文本保存在本地数据目录，不进入 Obsidian Vault。</span>
+          </div>
+          <label class="field">
+            <span>简历文本</span>
+            <textarea id="resume-text" rows="9" placeholder="粘贴简历文本。系统只提取明确出现的技术栈，并逐项等待你确认。"></textarea>
+          </label>
+          <div class="actions">
+            <label class="btn small file-btn">上传简历文件<input id="resume-file" type="file" accept=".pdf,.txt,.md" hidden></label>
+            <button class="btn" id="analyze-resume" type="button">保存并提取技能建议</button>
+            <button class="btn small" id="accept-all-suggestions" type="button" hidden>全部加入</button>
+            <button class="btn small ghost" id="dismiss-all-suggestions" type="button" hidden>忽略全部</button>
+            <span class="hint" id="resume-state"></span>
+          </div>
+          <div id="resume-suggestions" class="suggestions"></div>
+        </section>
+
+        <div class="split">
+          <section class="sheet">
+            <div class="sheet-head">
+              <h2>技术栈</h2>
+              <span class="hint">熟练度仅作采集权重，不因搜索行为自动改变。</span>
+            </div>
+            <div id="skills-list" class="stack-list"></div>
+            <form id="skill-form" class="inline-form">
+              <input name="name" placeholder="技能名，例如 Kubernetes" required>
+              <select name="category" aria-label="技术类别">
+                <option value="">类别</option>
+                <option value="language">语言</option>
+                <option value="framework">框架/库</option>
+                <option value="database">数据库</option>
+                <option value="middleware">中间件</option>
+                <option value="platform">平台</option>
+                <option value="devops">DevOps</option>
+                <option value="tool">工具</option>
+                <option value="graphics">图形</option>
+                <option value="protocol">协议</option>
+                <option value="architecture">架构</option>
+                <option value="concept">概念</option>
+                <option value="other">其他</option>
+              </select>
+              <select name="level" aria-label="熟练度">
+                <option value="0">了解</option>
+                <option value="1">入门</option>
+                <option value="2" selected>熟练</option>
+                <option value="3">精通</option>
+                <option value="4">专家</option>
+              </select>
+              <button class="btn small" type="submit">添加</button>
+            </form>
+          </section>
+
+          <section class="sheet">
+            <div class="sheet-head">
+              <h2>短期目标</h2>
+              <span class="hint">本期要完成的事，最多 3 个更有效。</span>
+            </div>
+            <div id="short-goals" class="goal-list"></div>
+            <form id="short-goal-form" class="inline-form goal-form">
+              <input name="title" placeholder="例如：完成一个幂等支付回调" required>
+              <input name="due_date" type="date" aria-label="截止日期">
+              <button class="btn small" type="submit">添加</button>
+            </form>
+          </section>
+        </div>
+
+        <section class="sheet">
+          <div class="sheet-head">
+            <h2>长期目标</h2>
+            <span class="hint">方向性目标，用于评估内容价值，不会自动改写。</span>
+          </div>
+          <div id="long-goals" class="goal-list goal-list-wide"></div>
+          <form id="long-goal-form" class="inline-form goal-form">
+            <input name="title" placeholder="例如：成为分布式系统方向的后端架构师" required>
+            <input name="description" placeholder="补充说明（可选）">
+            <button class="btn small" type="submit">添加</button>
+          </form>
+        </section>
+      </section>
+
+      <section class="view" id="view-inbox" aria-labelledby="inbox-title">
+        <header class="view-head">
+          <div>
+            <h1 id="inbox-title">收件箱</h1>
+            <p class="lede">采集结果先落盘为 Obsidian 卡片。每一条都说明为什么出现，你可以保存、略过或标记不相关。</p>
+          </div>
+          <button class="btn primary" id="collect-now" type="button">立即采集</button>
+        </header>
+        <div class="toolbar">
+          <div class="segmented" id="inbox-filter" role="group" aria-label="按状态筛选">
+            <button class="is-active" data-status="" type="button">全部</button>
+            <button data-status="inbox" type="button">未读</button>
+            <button data-status="read" type="button">已读</button>
+            <button data-status="saved" type="button">已保存</button>
+            <button data-status="not_relevant" type="button">不相关</button>
+          </div>
+          <span class="hint" id="inbox-count"></span>
+        </div>
+        <div id="inbox-list" class="item-list"></div>
+      </section>
+
+      <section class="view" id="view-news" aria-labelledby="news-title">
+        <header class="view-head">
+          <div>
+            <h1 id="news-title">近一周资讯</h1>
+            <p class="lede">按获取时间显示最近 7 天的资讯。列表只显示 AI 概括，点击查看全文和 Obsidian 文档。</p>
+          </div>
+          <button class="btn" id="refresh-news" type="button">刷新资讯</button>
+        </header>
+        <div class="toolbar">
+          <div class="segmented" id="news-platforms" role="group" aria-label="按平台筛选资讯"></div>
+          <span class="hint" id="news-count"></span>
+        </div>
+        <section class="sheet" id="github-ranking-panel" hidden>
+          <div class="sheet-head">
+            <h2>GitHub 榜单</h2>
+            <span class="hint" id="github-note"></span>
+          </div>
+          <div class="github-controls">
+            <select id="github-mode" aria-label="GitHub 排名方式">
+              <option value="trending_daily">今日新增 Star</option>
+              <option value="trending_weekly" selected>本周新增 Star</option>
+              <option value="trending_monthly">本月新增 Star</option>
+              <option value="stars">总 Star 榜</option>
+              <option value="forks">Fork 榜</option>
+              <option value="new">最新优质项目</option>
+            </select>
+            <select id="github-category" aria-label="GitHub 分类">
+              <option value="all">全部</option>
+              <option value="cpp">C++</option>
+              <option value="qt">Qt</option>
+              <option value="python">Python</option>
+              <option value="go">Go</option>
+              <option value="ai">AI / LLM</option>
+              <option value="agent">AI Agent</option>
+              <option value="ml">机器学习</option>
+              <option value="database">数据库</option>
+              <option value="network">网络编程</option>
+            </select>
+            <button class="btn small" id="github-refresh" type="button">刷新榜单</button>
+          </div>
+          <div id="github-ranking-list" class="github-list"></div>
+        </section>
+        <div id="news-list" class="news-list"></div>
+      </section>
+
+      <section class="view" id="view-search" aria-labelledby="search-title">
+        <header class="view-head">
+          <div>
+            <h1 id="search-title">检索</h1>
+            <p class="lede">输入技术栈、语法关键字或专业术语。标签精确匹配优先，其次是标题和全文。</p>
+          </div>
+        </header>
+        <form id="search-form" class="search-bar">
+          <input id="search-query" type="search" placeholder="例如：C++、async/await、分布式事务" autocomplete="off">
+          <input id="search-tags" type="text" placeholder="标签，可多个，用逗号分隔" autocomplete="off">
+          <button class="btn primary" type="submit">检索本地</button>
+        </form>
+        <div class="search-meta" id="search-meta"></div>
+        <div id="search-results" class="result-list"></div>
+      </section>
+
+      <section class="view" id="view-ask" aria-labelledby="ask-title">
+        <header class="view-head">
+          <div>
+            <h1 id="ask-title">问答</h1>
+            <p class="lede">先检索本地资料。只有经过服务端校验的本地片段才会生成可点击文档链接。</p>
+          </div>
+        </header>
+        <div class="qa-layout">
+          <aside class="sheet qa-groups-panel">
+            <div class="sheet-head">
+              <h2>分组</h2>
+              <button class="icon-btn" id="clear-qa-history" type="button">清空历史</button>
+            </div>
+            <div id="qa-group-list" class="qa-group-list"></div>
+            <form id="qa-group-form" class="inline-form">
+              <input name="name" placeholder="新分组名称" required>
+              <button class="btn small" type="submit">新建</button>
+            </form>
+            <p class="hint">分组只整理历史，不改变检索范围。</p>
+          </aside>
+          <div class="qa-main">
+            <form id="ask-form" class="ask-form">
+              <textarea id="ask-question" rows="4" placeholder="问一个具体问题。例如：Redis 事务和 Lua 脚本各自保证什么？" required></textarea>
+              <div class="ask-controls">
+                <label class="check"><input type="radio" name="ask-mode" value="auto" checked> 本地优先，不足时用模型常识</label>
+                <label class="check"><input type="radio" name="ask-mode" value="local"> 仅用本地资料</label>
+                <button class="btn primary" type="submit">提问</button>
+              </div>
+              <p class="hint" id="ask-group-hint">新问题会保存到“未分组”。</p>
+            </form>
+            <div class="ask-answer" id="ask-answer" hidden></div>
+            <section class="sheet">
+              <div class="sheet-head">
+                <h2>历史问答</h2>
+                <span class="hint" id="qa-history-meta"></span>
+              </div>
+              <div id="qa-history-list" class="qa-history-list"></div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="view-reviews" aria-labelledby="reviews-title">
+        <header class="view-head">
+          <div>
+            <h1 id="reviews-title">回顾</h1>
+            <p class="lede">按本地时区的日历周或月份生成。搜索和阅读只算关注，只有学习记录才能支持“已掌握”的判断。</p>
+          </div>
+          <div class="actions">
+            <select id="review-period" aria-label="回顾周期">
+              <option value="week">周回顾</option>
+              <option value="month">月回顾</option>
+            </select>
+            <button class="btn primary" id="generate-review" type="button">生成上一期</button>
+          </div>
+        </header>
+        <section class="sheet">
+          <div class="sheet-head">
+            <h2>学习记录</h2>
+            <span class="hint">这是回顾中唯一可作为技能进展依据的记录。</span>
+          </div>
+          <form id="progress-form" class="inline-form progress-form">
+            <input name="title" placeholder="例如：完成 Redis 幂等练习" required>
+            <input name="skill" placeholder="技能（可选）">
+            <select name="status" aria-label="状态">
+              <option value="done">完成</option>
+              <option value="partial">部分完成</option>
+              <option value="blocked">卡住</option>
+              <option value="planned">计划</option>
+            </select>
+            <input name="minutes" type="number" min="0" step="5" placeholder="分钟">
+            <button class="btn small" type="submit">记录</button>
+          </form>
+          <div id="progress-list" class="compact-list"></div>
+        </section>
+        <div class="review-layout">
+          <section class="sheet">
+            <div class="sheet-head"><h2>已生成回顾</h2></div>
+            <div id="review-list" class="compact-list"></div>
+          </section>
+          <section class="sheet review-detail">
+            <div class="sheet-head">
+              <h2 id="review-detail-title">选择一期回顾</h2>
+              <a id="review-obsidian" class="text-link" hidden>在 Obsidian 打开</a>
+            </div>
+            <div id="review-detail" class="markdown-view">生成或选择一期回顾后显示内容。</div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" id="view-interests" aria-labelledby="interests-title">
+        <header class="view-head">
+          <div>
+            <h1 id="interests-title">近期兴趣</h1>
+            <p class="lede">只来自你主动的检索和问答，按 14 天半衰期衰减。它只改变采集排序，不会改写简历、熟练度或目标。</p>
+          </div>
+          <button class="btn danger-quiet" id="clear-interests" type="button">清空行为历史</button>
+        </header>
+        <div id="interest-list" class="interest-list"></div>
+      </section>
+
+      <section class="view" id="view-settings" aria-labelledby="settings-title">
+        <header class="view-head">
+          <div>
+            <h1 id="settings-title">设置</h1>
+            <p class="lede">来源、调度与模型权限都在本地配置。服务默认只监听本机回环地址。</p>
+          </div>
+          <button class="btn" id="sync-vault" type="button">重新索引 Vault</button>
+        </header>
+
+        <section class="sheet">
+          <div class="sheet-head">
+            <h2>资讯来源</h2>
+            <span class="hint">采集结果只写入本地，不自动发布。</span>
+          </div>
+          <div id="source-list" class="source-list"></div>
+          <form id="source-form" class="source-form">
+            <select name="kind" id="source-kind" aria-label="来源类型">
+              <option value="rss">RSS / Atom</option>
+              <option value="github">GitHub 仓库</option>
+              <option value="arxiv">arXiv 论文</option>
+              <option value="web">手动网页</option>
+            </select>
+            <input name="name" placeholder="来源名称" required>
+            <input name="platform" placeholder="平台分组，例如 C++ 博客">
+            <input name="target" id="source-target" placeholder="订阅地址" required>
+            <input name="interval" type="number" min="5" value="1440" aria-label="采集间隔（分钟）">
+            <button class="btn small" type="submit">添加来源</button>
+          </form>
+          <p class="hint" id="source-target-hint">RSS：填写完整订阅地址。</p>
+        </section>
+
+        <section class="sheet">
+          <div class="sheet-head">
+            <h2>模型服务</h2>
+            <span class="hint" id="llm-key-state">正在读取…</span>
+          </div>
+          <div id="provider-list" class="provider-list"></div>
+          <form id="provider-form" class="provider-form">
+            <input type="hidden" name="provider_id">
+            <div class="form-grid">
+              <label>预设<select id="provider-preset" name="preset_key"><option value="">选择预设…</option></select></label>
+              <label>显示名称<input name="name" required placeholder="例如：DeepSeek 工作账号"></label>
+              <label>协议<select name="protocol">
+                <option value="anthropic">Anthropic Messages</option>
+                <option value="openai">OpenAI Chat Completions</option>
+              </select></label>
+              <label>认证方式<select name="auth_style">
+                <option value="bearer">Bearer Token</option>
+                <option value="x-api-key">x-api-key</option>
+              </select></label>
+              <label class="span-2">Base URL<input name="base_url" required placeholder="https://api.example.com/anthropic"></label>
+              <label>模型 ID<input name="model" required list="provider-models" placeholder="例如：deepseek-v4-pro[1M]"></label>
+              <label>API Key<input name="api_key" type="password" minlength="8" autocomplete="off" spellcheck="false" placeholder="留空保留当前密钥"></label>
+              <label>官网<input name="website_url" placeholder="仅作参考"></label>
+              <label>文档<input name="docs_url" placeholder="仅作参考"></label>
+            </div>
+            <datalist id="provider-models"></datalist>
+            <details class="advanced">
+              <summary class="hint">高级选项</summary>
+              <div class="form-grid">
+                <label class="check"><input type="checkbox" name="requires_key" checked> 需要 API Key（本地服务可取消）</label>
+                <label class="span-2">自定义请求头 JSON<textarea name="extra_headers_json" rows="2" placeholder='{"X-Custom-Header": "value"}'></textarea></label>
+              </div>
+            </details>
+            <div class="actions">
+              <label class="check"><input type="checkbox" name="activate"> 设为当前服务</label>
+              <button class="btn primary" id="save-provider" type="submit">添加服务</button>
+              <button class="btn" id="cancel-provider" type="button" hidden>取消编辑</button>
+              <span class="hint" id="provider-form-note"></span>
+            </div>
+          </form>
+          <p class="hint">预设参考 CC-Switch 的公开配置；厂商可能调整模型 ID 或地址，请以服务商文档为准。密钥写入本地私有数据目录，不写入 Vault 或 SQLite；环境变量优先。</p>
+        </section>
+
+        <div class="split">
+          <section class="sheet">
+            <div class="sheet-head"><h2>运行偏好</h2></div>
+            <form id="settings-form" class="form-grid">
+              <label>时区<input name="timezone" placeholder="Asia/Shanghai"></label>
+              <label>每次采集上限<input name="collection_limit" type="number" min="1" max="100"></label>
+              <label>兴趣半衰期（天）<input name="interest_half_life_days" type="number" min="1" max="365"></label>
+              <label class="check"><input type="checkbox" name="track_interactions"> 记录检索与问答用于近期兴趣</label>
+              <label class="check"><input type="checkbox" name="qa_history_enabled"> 保存问答历史</label>
+              <label class="check"><input type="checkbox" name="llm_enabled"> 允许调用外部模型</label>
+              <label class="check"><input type="checkbox" name="allow_private_urls"> 允许抓取本机或内网地址</label>
+            </form>
+            <div class="actions">
+              <button class="btn primary" id="save-settings" type="button">保存设置</button>
+              <span class="hint" id="settings-state"></span>
+            </div>
+          </section>
+
+          <section class="sheet">
+            <div class="sheet-head"><h2>本地状态</h2></div>
+            <dl class="status-list" id="settings-status"></dl>
+            <div class="actions">
+              <button class="btn small" id="refresh-status" type="button">刷新状态</button>
+              <a class="text-link" href="/docs" target="_blank" rel="noreferrer">API 文档</a>
+            </div>
+          </section>
+        </div>
+
+        <section class="sheet">
+          <div class="sheet-head">
+            <h2>标签别名</h2>
+            <span class="hint">为技术栈和中文术语建立同义词，例如 Redis 与 Redis缓存。</span>
+          </div>
+          <div id="tag-list" class="tag-list"></div>
+          <form id="alias-form" class="inline-form">
+            <input name="slug" placeholder="标签 slug，例如 redis" required>
+            <input name="alias" placeholder="新增别名" required>
+            <button class="btn small" type="submit">添加别名</button>
+          </form>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <dialog id="note-dialog" class="note-dialog">
+    <div class="dialog-head">
+      <div>
+        <h2 id="note-title">本地笔记</h2>
+        <p id="note-path" class="hint"></p>
+      </div>
+      <button class="btn small" id="close-note" type="button">关闭</button>
+    </div>
+    <div class="dialog-actions">
+      <a id="note-obsidian" class="btn small" hidden>在 Obsidian 打开</a>
+    </div>
+    <pre id="note-body" class="note-body"></pre>
+  </dialog>
+
+  <dialog id="news-dialog" class="note-dialog news-dialog">
+    <div class="dialog-head">
+      <div>
+        <h2 id="news-detail-title">资讯全文</h2>
+        <p id="news-detail-meta" class="hint"></p>
+      </div>
+      <button class="btn small" id="close-news" type="button">关闭</button>
+    </div>
+    <div id="news-detail-summary" class="news-detail-summary"></div>
+    <div class="dialog-actions">
+      <a id="news-source-link" class="btn small" target="_blank" rel="noreferrer" hidden>打开原文</a>
+      <a id="news-obsidian-link" class="btn small" hidden>在 Obsidian 打开</a>
+    </div>
+    <pre id="news-detail-body" class="note-body"></pre>
+  </dialog>
+
+  <script src="/static/app.js?v=0.2.10" defer></script>
+</body>
+</html>

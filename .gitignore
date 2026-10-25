@@ -1,0 +1,16 @@
+data/
+vault/
+.devcache/
+.devcache2/
+.devdata/
+.devvault/
+.claude/
+.env
+*.log
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+dist/
+build/
+*.egg-info/
